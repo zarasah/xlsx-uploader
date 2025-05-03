@@ -23,14 +23,30 @@
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
 ## Description
+### Excel Import Validator
+[Nest](https://github.com/nestjs/nest) based backend application that allows uploading and validating Excel (.xlsx) files, logging validation errors, storing valid rows into a PostgreSQL database, and broadcasting row creation events via Socket.io. Includes Redis-based progress tracking and unit tests.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Features
+
+- Upload and parse Excel (.xlsx) files
+- Row-level validation using `class-validator`
+- Store valid rows into PostgreSQL
+- Log validation errors to `result.txt`
+- Track processing progress using Redis
+- Group results by date via API
+- Broadcast events with Socket.IO
+- Unit tests with Jest
 
 ## Installation
 
 ```bash
 $ npm install
 ```
+
+## Environment Setup
+
+1. Copy `.example.env` to `.development.env`
+2. Fill in your actual credentials and paths:
 
 ## Running the app
 
@@ -58,16 +74,21 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-## Support
+## 📦 Usage
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Uploading an Excel File
 
-## Stay in touch
+1. Send a `POST` request to the `/import` endpoint with an `.xlsx` file in the `file` field (`multipart/form-data`).
+2. The system will:
+    - Skip the header row
+    - Parse each row into a DTO
+    - Validate each row using `class-validator`
+    - Save valid rows into the database
+    - Log invalid rows (with line number and error messages) into a `result.txt` file
+    - Track progress in Redis
+    - Emit row creation events via Socket.IO
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
 
-## License
+## Author
+Zarine Sahakyan
 
-Nest is [MIT licensed](LICENSE).
