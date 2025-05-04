@@ -59,10 +59,37 @@ describe('ImportService - parseAndValidate', () => {
     mockWorksheet = {};
     Object.defineProperty(mockWorksheet, 'rowCount', { value: rows.length });
 
+    mockWorksheet.getRow = (index: number) => {
+      const row = rows[index - 1]; // Adjust to 0-based index
+      return {
+        worksheet: mockWorksheet,
+        hasValues: true,
+        values: [null, ...row], // Mock row values
+        model: row,
+        dimensions: { top: 0, left: 0, bottom: 0, right: 0 },
+        getCell: (colIndex: number) => ({
+          value: row[colIndex - 1], // 1-based index for Excel
+        }),
+        // Add other properties from ExcelJS.Row if necessary
+      } as unknown as ExcelJS.Row; // Cast to the expected Row type
+    };
+
     mockWorksheet.eachRow = function (...args: any[]) {
       const callback = args.length === 1 ? args[0] : args[1];
       rows.forEach((row, index) => {
-        callback({ values: [null, ...row] }, index + 1);
+        callback(
+          {
+            worksheet: mockWorksheet,
+            hasValues: true,
+            values: [null, ...row],
+            model: row,
+            dimensions: { top: 0, left: 0, bottom: 0, right: 0 },
+            getCell: (colIndex: number) => ({
+              value: row[colIndex - 1],
+            }),
+          } as unknown as ExcelJS.Row,
+          index + 1,
+        );
       });
     } as any;
 
@@ -138,201 +165,3 @@ describe('ImportService - parseAndValidate', () => {
     );
   });
 });
-
-
-
-// import { ImportService } from './import.service';
-// import { ImportRowEntity } from './entity/import.row.entity';
-// import { RedisService } from '../redis/redis.service';
-// import { EventEmitter2 } from '@nestjs/event-emitter';
-// import * as fs from 'fs';
-// import * as path from 'path';
-// import * as ExcelJS from 'exceljs';
-//
-// describe('parseAndValidate', () => {
-//   let service: ImportService;
-//   let redisService: { setParsingProgress: jest.Mock };
-//   let eventEmitter: { emit: jest.Mock };
-//   let createMock: jest.Mock;
-//   let saveMock: jest.Mock;
-//   let importRowRepository: { create: jest.Mock; save: jest.Mock };
-//   let mockWorkbook: ExcelJS.Workbook;
-//   let mockWorksheet: Partial<ExcelJS.Worksheet>;
-//
-//   beforeEach(() => {
-//     redisService = { setParsingProgress: jest.fn() };
-//     eventEmitter = { emit: jest.fn() };
-//     createMock = jest.fn((row) => row);
-//     saveMock = jest.fn((row) => Promise.resolve({ ...row, id: 1 }));
-//     importRowRepository = {
-//       create: createMock,
-//       save: saveMock,
-//     } as any;
-//
-//     jest.spyOn(ExcelJS, 'Workbook').mockImplementation(() => mockWorkbook);
-//     jest.spyOn(fs, 'writeFileSync').mockImplementation();
-//     jest.spyOn(path, 'join').mockReturnValue('mocked/path');
-//
-//     service = new ImportService(
-//       importRowRepository as any,
-//       redisService as any,
-//       eventEmitter as any
-//     );
-//   });
-//
-//   it('should process valid rows successfully', async () => {
-//     // Header + 2 valid data rows
-//     mockWorksheet = {};
-//     Object.defineProperty(mockWorksheet, 'rowCount', { value: 3 });
-//     mockWorksheet.eachRow = function (...args: any[]) {
-//       let callback: (row: any, rowNumber: number) => void;
-//       if (args.length === 1) {
-//         callback = args[0];
-//       } else {
-//         callback = args[1];
-//       }
-//       callback({ values: [null, 'ID', 'Name', 'Date'] }, 1); // header
-//       callback({ values: [null, 1, 'Test Name', '01.01.2023'] }, 2);
-//       callback({ values: [null, 2, 'Test Name 2', '02.01.2023'] }, 3);
-//     } as any;
-//
-//     mockWorkbook = {
-//       xlsx: {
-//         readFile: jest.fn(),
-//       },
-//       worksheets: [mockWorksheet as ExcelJS.Worksheet],
-//     } as any;
-//
-//     const result = await service.parseAndValidate('test.xlsx', 'test-key');
-//
-//     expect(result).toEqual({
-//       successCount: 2,
-//       errorCount: 0,
-//     });
-//   });
-//
-//   it('should handle validation errors', async () => {
-//     mockWorksheet = {};
-//     Object.defineProperty(mockWorksheet, 'rowCount', { value: 2 });
-//     mockWorksheet.eachRow = function (...args: any[]) {
-//       let callback: (row: any, rowNumber: number) => void;
-//       if (args.length === 1) {
-//         callback = args[0];
-//       } else {
-//         callback = args[1];
-//       }
-//       callback({ values: [null, 'invalid-id', '', 'invalid-date'] }, 2);
-//     } as any;
-//
-//     mockWorkbook = {
-//       xlsx: {
-//         readFile: jest.fn(),
-//       },
-//       worksheets: [mockWorksheet as ExcelJS.Worksheet],
-//     } as any;
-//
-//     const result = await service.parseAndValidate('test.xlsx', 'test-key');
-//
-//     expect(result).toEqual({
-//       successCount: 0,
-//       errorCount: 1,
-//     });
-//
-//     expect(fs.writeFileSync).toHaveBeenCalledWith(
-//       'mocked/path',
-//       expect.stringContaining('2 - '),
-//       'utf-8'
-//     );
-//   });
-//
-//   it('should skip header row', async () => {
-//     mockWorksheet = {};
-//     Object.defineProperty(mockWorksheet, 'rowCount', { value: 2 });
-//     mockWorksheet.eachRow = function (...args: any[]) {
-//       let callback: (row: any, rowNumber: number) => void;
-//       if (args.length === 1) {
-//         callback = args[0];
-//       } else {
-//         callback = args[1];
-//       }
-//       callback({ values: [null, 'ID', 'Name', 'Date'] }, 1);
-//       callback({ values: [null, 1, 'Test Name', '01.01.2023'] }, 2);
-//     } as any;
-//
-//     mockWorkbook = {
-//       xlsx: {
-//         readFile: jest.fn(),
-//       },
-//       worksheets: [mockWorksheet as ExcelJS.Worksheet],
-//     } as any;
-//
-//     const result = await service.parseAndValidate('test.xlsx', 'test-key');
-//
-//     expect(result).toEqual({
-//       successCount: 1,
-//       errorCount: 0,
-//     });
-//   });
-//
-//   it('should handle empty file', async () => {
-//     mockWorksheet = {};
-//     Object.defineProperty(mockWorksheet, 'rowCount', { value: 1 });
-//     mockWorksheet.eachRow = function (...args: any[]) {
-//       // No rows
-//     } as any;
-//
-//     mockWorkbook = {
-//       xlsx: {
-//         readFile: jest.fn(),
-//       },
-//       worksheets: [mockWorksheet as ExcelJS.Worksheet],
-//     } as any;
-//
-//     const result = await service.parseAndValidate('test.xlsx', 'test-key');
-//
-//     expect(result).toEqual({
-//       successCount: 0,
-//       errorCount: 0,
-//     });
-//   });
-//
-//   it('should process valid rows and log errors for invalid ones', async () => {
-//     mockWorksheet = {};
-//     Object.defineProperty(mockWorksheet, 'rowCount', { value: 3 });
-//
-//     mockWorksheet.eachRow = function (...args: any[]) {
-//       let callback: (row: any, rowNumber: number) => void;
-//       if (args.length === 1) {
-//         callback = args[0];
-//       } else {
-//         callback = args[1];
-//       }
-//
-//       callback({ values: [null, 'ID', 'Name', 'Date'] }, 1); // header
-//       callback({ values: [null, 1, 'Valid Name', '01.01.2023'] }, 2); // valid
-//       callback({ values: [null, 'bad-id', '', 'invalid-date'] }, 3); // invalid
-//     } as any;
-//
-//     mockWorkbook = {
-//       xlsx: {
-//         readFile: jest.fn(),
-//       },
-//       worksheets: [mockWorksheet as ExcelJS.Worksheet],
-//     } as any;
-//
-//     const result = await service.parseAndValidate('test.xlsx', 'test-key');
-//
-//     expect(result).toEqual({
-//       successCount: 1,
-//       errorCount: 1,
-//     });
-//
-//     expect(saveMock).toHaveBeenCalledTimes(1);
-//     expect(fs.writeFileSync).toHaveBeenCalledWith(
-//       'mocked/path',
-//       expect.stringContaining('3 - '), // Error line
-//       'utf-8'
-//     );
-//   });
-//
-// });
