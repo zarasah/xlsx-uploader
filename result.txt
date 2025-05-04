@@ -1,4 +1,0 @@
-10024 - date must be in format d.m.Y
-37756 - id must be a number
-46161 - date must be in format d.m.Y
-49317 - date must be in format d.m.Y
